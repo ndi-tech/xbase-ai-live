@@ -1,0 +1,455 @@
+﻿'use client';
+
+import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://yllquiyrnhicvnrhihfk.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsbHF1aXlybmhpY3ZucmhpaGZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MzAxNzAsImV4cCI6MjA5MjUwNjE3MH0.bJI1KBep_S62_cDlST7R7luBU1TirciERIqLBfHLnGk';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Theme Colors
+const darkTheme = {
+  bg: '#0B0F14',
+  bg2: '#0F172A',
+  bg3: '#111827',
+  border: '#1F2937',
+  border2: '#374151',
+  accent: '#00FFA3',
+  accentLight: '#33FFD1',
+  accentDim: '#00C97F',
+  secondary: '#3B82F6',
+  text: '#E5E7EB',
+  textSub: '#9CA3AF',
+  textMuted: '#6B7280',
+  cardBg: '#1E293BCC',
+};
+
+const lightTheme = {
+  bg: '#F0FDF4',
+  bg2: '#FFFFFF',
+  bg3: '#F8FAFC',
+  border: '#D1D5DB',
+  border2: '#9CA3AF',
+  accent: '#059669',
+  accentLight: '#10B981',
+  accentDim: '#047857',
+  secondary: '#2563EB',
+  text: '#1F2937',
+  textSub: '#4B5563',
+  textMuted: '#6B7280',
+  cardBg: '#FFFFFFCC',
+};
+
+function useWidth() {
+  const [w, setW] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1280);
+  useEffect(() => {
+    const fn = () => setW(window.innerWidth);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return w;
+}
+
+export default function SettingsPage() {
+  const width = useWidth();
+  const isMobile = width < 1024;
+
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState('Settings');
+  const [isDark, setIsDark] = useState(true);
+  const [personality, setPersonality] = useState({
+    tone: 'friendly',
+    language: 'english',
+    style: 'casual'
+  });
+  const [saved, setSaved] = useState(false);
+
+  const theme = isDark ? darkTheme : lightTheme;
+
+  const navItems = [
+    { name: "Dashboard", icon: "◆", path: "/dashboard" },
+    { name: "Products", icon: "●", path: "/products" },
+    { name: "AI Agents", icon: "○", path: "/agents" },
+    { name: "AI Chat", icon: "◇", path: "/ai-chat" },
+    { name: "Documents", icon: "□", path: "/documents" },
+    { name: "Orders", icon: "■", path: "/orders" },
+    { name: "Pricing", icon: "💰", path: "/pricing" },
+    `n    { name: "Settings", icon: "⚙️", path: "/settings" } }
+  ];
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('xbase_theme');
+    if (savedTheme === 'light') setIsDark(false);
+    if (savedTheme === 'dark') setIsDark(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('xbase_theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = '/login';
+        return;
+      }
+      setUser(user);
+      
+      const savedPersonality = localStorage.getItem('ai_personality');
+      if (savedPersonality) {
+        setPersonality(JSON.parse(savedPersonality));
+      }
+      
+      setLoading(false);
+    };
+    checkUser();
+  }, []);
+
+  const savePersonality = async () => {
+    localStorage.setItem('ai_personality', JSON.stringify(personality));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: theme.bg,
+        color: theme.text
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 48,
+            height: 48,
+            border: `2px solid ${theme.border}`,
+            borderTop: `2px solid ${theme.accent}`,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto'
+          }} />
+          <p style={{ marginTop: 16, color: theme.textSub }}>Loading Settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      background: `radial-gradient(circle at 20% 20%, ${theme.accent}08, transparent 50%),
+                   radial-gradient(circle at 80% 30%, ${theme.secondary}08, transparent 50%),
+                   ${theme.bg}`,
+      color: theme.text,
+      fontFamily: "'Inter', system-ui, sans-serif"
+    }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .nav-item {
+          transition: all 0.2s ease;
+        }
+        .nav-item:hover {
+          background: ${theme.accent}15;
+          color: ${theme.accentLight};
+          transform: translateX(4px);
+        }
+        .glass-card {
+          backdrop-filter: blur(12px);
+          background: ${theme.cardBg};
+          border: 1px solid ${theme.border};
+        }
+        button, a {
+          transition: all 0.2s ease;
+        }
+        ::-webkit-scrollbar {
+          width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${theme.bg2};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${theme.border2};
+          border-radius: 4px;
+        }
+      `}</style>
+
+      {/* SIDEBAR */}
+      <aside style={{
+        width: 280,
+        background: theme.bg2,
+        borderRight: `1px solid ${theme.border}`,
+        transition: '0.3s ease',
+        transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+        position: isMobile ? 'fixed' : 'relative',
+        height: '100vh',
+        zIndex: 50,
+        overflowY: 'auto'
+      }}>
+        <div style={{ padding: '24px 20px', borderBottom: `1px solid ${theme.border}`, marginBottom: 16 }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${theme.accent}, ${theme.secondary})`,
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 12
+          }}>
+            <span style={{ fontSize: 22, fontWeight: 900, color: '#000' }}>X</span>
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: theme.text }}>Xbase AI</h2>
+          <p style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>Agent Platform</p>
+        </div>
+
+        <nav style={{ padding: '0 16px' }}>
+          {navItems.map((item) => (
+            <a
+              key={item.name}
+              href={item.path}
+              className="nav-item"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 12,
+                textDecoration: 'none',
+                color: activeNav === item.name ? theme.accentLight : theme.textSub,
+                background: activeNav === item.name ? `${theme.accent}10` : 'transparent',
+                marginBottom: 4
+              }}
+              onClick={() => { setActiveNav(item.name); if (isMobile) setSidebarOpen(false); }}
+            >
+              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span style={{ fontSize: 14, fontWeight: 500 }}>{item.name}</span>
+            </a>
+          ))}
+        </nav>
+
+        <div style={{ margin: '16px', padding: '12px', background: `${theme.bg3}80`, borderRadius: 12, border: `1px solid ${theme.border}` }}>
+          <button onClick={toggleTheme} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 8,
+            borderRadius: 8,
+            color: theme.text
+          }}>
+            <span style={{ fontSize: 20 }}>{isDark ? '☀️' : '🌙'}</span>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
+        </div>
+
+        <div style={{ padding: '16px', borderTop: `1px solid ${theme.border}`, marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36,
+            height: 36,
+            background: `linear-gradient(135deg, ${theme.accentDim}, ${theme.accent})`,
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            color: '#000'
+          }}>{user?.email?.charAt(0).toUpperCase()}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{user?.email?.split('@')[0]}</div>
+            <div style={{ fontSize: 10, color: theme.textMuted }}>{user?.email}</div>
+          </div>
+          <button onClick={handleLogout} style={{
+            background: 'transparent',
+            border: `1px solid ${theme.border}`,
+            padding: '6px 10px',
+            borderRadius: 8,
+            fontSize: 12,
+            cursor: 'pointer',
+            color: theme.textSub
+          }}>Exit</button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main style={{ flex: 1, padding: 24, overflowY: 'auto', minHeight: '100vh' }}>
+        {isMobile && (
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+            marginBottom: 20,
+            padding: 10,
+            background: theme.cardBg,
+            border: `1px solid ${theme.border}`,
+            borderRadius: 10,
+            cursor: 'pointer',
+            color: theme.text
+          }}>☰ Menu</button>
+        )}
+
+        <div className="glass-card" style={{ padding: 32, borderRadius: 24 }}>
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: theme.text, marginBottom: 8 }}>AI Personality</h1>
+            <p style={{ color: theme.textSub }}>Customize how your AI agent talks to customers</p>
+          </div>
+
+          {/* Tone Selection */}
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 12 }}>AI Tone</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {[
+                { value: 'professional', label: '[P] Professional', desc: 'Formal, business-like' },
+                { value: 'friendly', label: '[F] Friendly', desc: 'Warm, approachable' },
+                { value: 'cameroonian', label: '[C] Cameroonian', desc: 'Local, warm, "My brother"' }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPersonality({ ...personality, tone: opt.value })}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 16,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: personality.tone === opt.value ? `${theme.accent}15` : 'transparent',
+                    border: `1px solid ${personality.tone === opt.value ? theme.accent : theme.border}`,
+                    color: theme.text
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{opt.label}</div>
+                  <div style={{ fontSize: 12, color: theme.textSub }}>{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Language Selection */}
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 12 }}>Primary Language</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+              {[
+                { value: 'english', label: '[EN] English', desc: 'English responses' },
+                { value: 'french', label: '[FR] French', desc: 'Français' },
+                { value: 'pidgin', label: '[PD] Pidgin', desc: 'Cameroon Pidgin English' }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPersonality({ ...personality, language: opt.value })}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 16,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    background: personality.language === opt.value ? `${theme.accent}15` : 'transparent',
+                    border: `1px solid ${personality.language === opt.value ? theme.accent : theme.border}`,
+                    color: theme.text
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{opt.label}</div>
+                  <div style={{ fontSize: 12, color: theme.textSub }}>{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Style Selection */}
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 12 }}>Conversation Style</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+              {[
+                { value: 'casual', label: '[C] Casual', desc: 'Short, quick responses' },
+                { value: 'detailed', label: '[D] Detailed', desc: 'Helpful, thorough' }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPersonality({ ...personality, style: opt.value })}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 16,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    background: personality.style === opt.value ? `${theme.accent}15` : 'transparent',
+                    border: `1px solid ${personality.style === opt.value ? theme.accent : theme.border}`,
+                    color: theme.text
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{opt.label}</div>
+                  <div style={{ fontSize: 12, color: theme.textSub }}>{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={savePersonality}
+            style={{
+              width: '100%',
+              background: `linear-gradient(135deg, ${theme.accent}, ${theme.secondary})`,
+              border: 'none',
+              padding: '14px',
+              borderRadius: 14,
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: 'pointer',
+              color: '#000',
+              marginBottom: 20
+            }}
+          >
+            Save Personality Settings
+          </button>
+
+          {saved && (
+            <div style={{
+              padding: 12,
+              background: `${theme.accent}15`,
+              borderRadius: 12,
+              textAlign: 'center',
+              marginBottom: 20,
+              color: theme.accent,
+              fontSize: 13
+            }}>
+              [OK] AI personality saved!
+            </div>
+          )}
+
+          <div style={{
+            padding: 20,
+            background: `${theme.bg2}80`,
+            borderRadius: 16,
+            border: `1px solid ${theme.border}`
+          }}>
+            <h4 style={{ fontWeight: 600, color: theme.text, marginBottom: 8 }}>Preview Example</h4>
+            <p style={{ color: theme.textSub, fontSize: 14 }}>
+              {personality.tone === 'professional' && "Thank you for your inquiry. How may I assist you today?"}
+              {personality.tone === 'friendly' && "Hey there! Thanks for reaching out. What can I help you with? :)"}
+              {personality.tone === 'cameroonian' && "Hello my brother! How I fit help you today? :)"}
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+
+
+
+

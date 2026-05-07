@@ -1,0 +1,54 @@
+import { NextResponse } from 'next/server';
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    
+    let phone = body.from || body.sender || body.phone;
+    let message = body.text || body.body || body.message;
+    
+    if (!message || !phone) {
+      return NextResponse.json({ error: "No message or phone" });
+    }
+    
+    const reply = getReply(message);
+    
+    return NextResponse.json({ 
+      success: true, 
+      reply: reply,
+      from: phone
+    });
+    
+  } catch (error) {
+    return NextResponse.json({ error: error.message });
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    status: "Xbase AI WhatsApp Webhook Active",
+    message: "Send POST request with { from: phone, text: message }"
+  });
+}
+
+function getReply(message) {
+  const msg = message.toLowerCase();
+  
+  if (msg.includes("hello") || msg.includes("hi")) {
+    return "👋 Hello! Welcome to Xbase AI!\n\nReply with PRODUCTS to see catalog, PRICING for rates, HELP for support, or ORDER to buy.";
+  }
+  if (msg.includes("product")) {
+    return "📦 Products:\n• AI Agent - 50,000 FCFA\n• Chatbot - 25,000 FCFA\n• Analytics - 15,000 FCFA";
+  }
+  if (msg.includes("price")) {
+    return "💰 Pricing:\n• AI Agent: 50,000 FCFA\n• Chatbot: 25,000 FCFA\n• Analytics: 15,000 FCFA";
+  }
+  if (msg.includes("help")) {
+    return "🆘 Support: email support@xbase.ai or visit https://xbase-dashboard-clean.vercel.app";
+  }
+  if (msg.includes("order")) {
+    return "🛒 To order: Tell me which product, quantity, and delivery address.";
+  }
+  
+  return "🤖 Xbase AI Assistant\n\nHow can I help? Try: PRODUCTS, PRICING, HELP, or ORDER";
+}

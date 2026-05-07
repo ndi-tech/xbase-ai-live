@@ -1,0 +1,8 @@
+﻿/node_modules
+/.next
+/.vercel
+.env.local
+whatsapp-bot/
+whatsapp-bot-simple/
+xbase-whatsapp-bot/
+evolution-api-key.txt
