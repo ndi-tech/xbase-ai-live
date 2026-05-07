@@ -62,45 +62,56 @@ export default function DocumentsPage() {
         return;
       }
       setUser(user);
-      await loadDocuments(user.id);
+      await loadDocuments();
     };
     init();
   }, []);
 
-  const loadDocuments = async (userId) => {
-    const { data } = await supabase.from('documents').select('*').eq('user_id', userId);
-    setDocuments(data || []);
-    setLoading(false);
+  const loadDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, filename, content, created_at, uploaded_at')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      setDocuments(data || []);
+    } catch (err) {
+      console.error("Load error:", err);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setUploading(true);
-    setMessage(`Uploading ${file.name}...`);
+    setMessage(`📤 Uploading ${file.name}...`);
     
-    // Read file content
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const content = event.target?.result as string;
+      const content = event.target?.result;
       
-      // Save to Supabase
-      const { error } = await supabase.from('documents').insert({
-        user_id: user.id,
-        filename: file.name,
-        content: content,
-        created_at: new Date().toISOString()
-      });
-      
-      if (error) {
-        setMessage(`❌ Error: ${error.message}`);
-      } else {
-        setMessage(`✅ "${file.name}" uploaded and AI is training...`);
-        await loadDocuments(user.id);
+      try {
+        const { error } = await supabase.from('documents').insert({
+          user_id: user.id,
+          filename: file.name,
+          content: content,
+          created_at: new Date().toISOString()
+        });
+        
+        if (error) throw error;
+        
+        setMessage(`✅ "${file.name}" uploaded! AI is training...`);
+        await loadDocuments();
         setTimeout(() => {
-          setMessage('AI knowledge base updated! Your customers will now get smarter responses.');
+          setMessage('🎉 AI knowledge base updated!');
         }, 2000);
+      } catch (err) {
+        setMessage(`❌ Error: ${err.message}`);
       }
       setUploading(false);
     };
@@ -112,11 +123,8 @@ export default function DocumentsPage() {
     if (confirm(`Delete "${filename}"?`)) {
       const { error } = await supabase.from('documents').delete().eq('id', id);
       if (!error) {
-        setMessage(`🗑️ Deleted: ${filename}. AI is updating...`);
-        await loadDocuments(user.id);
-        setTimeout(() => {
-          setMessage('AI knowledge base updated!');
-        }, 2000);
+        setMessage(`🗑️ Deleted: ${filename}`);
+        await loadDocuments();
       }
     }
   };
@@ -130,121 +138,62 @@ export default function DocumentsPage() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        background: theme.bg
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: theme.bg }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            width: 48,
-            height: 48,
+            width: 48, height: 48,
             border: `2px solid ${theme.border}`,
             borderTop: `2px solid ${theme.accent}`,
             borderRadius: '50%',
             animation: 'spin 0.8s linear infinite',
             margin: '0 auto'
           }} />
+          <p style={{ marginTop: 16, color: theme.textSub }}>Loading Documents...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      display: "flex", 
-      minHeight: "100vh", 
-      background: `radial-gradient(circle at 20% 20%, ${theme.accent}08, transparent 50%), radial-gradient(circle at 80% 30%, ${theme.secondary}08, transparent 50%), ${theme.bg}`, 
-      color: theme.text, 
-      fontFamily: "'Inter', sans-serif" 
-    }}>
-      <Sidebar 
-        activeNav="Documents" 
-        isMobile={isMobile} 
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-        isDark={isDark} 
-        user={user} 
-        handleLogout={handleLogout} 
-      />
+    <div style={{ display: "flex", minHeight: "100vh", background: `radial-gradient(circle at 20% 20%, ${theme.accent}08, transparent 50%), radial-gradient(circle at 80% 30%, ${theme.secondary}08, transparent 50%), ${theme.bg}`, color: theme.text }}>
+      <Sidebar activeNav="Documents" isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} theme={theme} toggleTheme={toggleTheme} isDark={isDark} user={user} handleLogout={handleLogout} />
       
       <main style={{ flex: 1, padding: 24, overflowY: "auto" }}>
         {isMobile && !sidebarOpen && (
-          <button 
-            onClick={() => setSidebarOpen(true)} 
-            style={{ marginBottom: 20, padding: 10, background: theme.cardBg, border: "1px solid " + theme.border, borderRadius: 10, cursor: "pointer", color: theme.text }}
-          >
-            ☰ Open Menu
-          </button>
+          <button onClick={() => setSidebarOpen(true)} style={{ marginBottom: 20, padding: 10, background: theme.cardBg, border: "1px solid " + theme.border, borderRadius: 10, cursor: "pointer", color: theme.text }}>☰ Open Menu</button>
         )}
         
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          {/* Header */}
-          <div style={{ 
-            background: theme.bg2, 
-            borderRadius: 20, 
-            padding: 24, 
-            marginBottom: 24, 
-            border: "1px solid " + theme.border 
-          }}>
+          <div style={{ background: theme.bg2, borderRadius: 20, padding: 24, marginBottom: 24, border: "1px solid " + theme.border }}>
             <h1 style={{ fontSize: 28, fontWeight: 800 }}>📄 Documents</h1>
             <p style={{ color: theme.textSub }}>Upload documents to train your AI agent</p>
           </div>
 
-          {/* Message */}
           {message && (
-            <div style={{ 
-              background: theme.accentDim, 
-              color: "#000", 
-              padding: 12, 
-              borderRadius: 10, 
-              marginBottom: 20, 
-              textAlign: "center",
-              fontWeight: 500
-            }}>
+            <div style={{ background: theme.accentDim, color: "#000", padding: 12, borderRadius: 10, marginBottom: 20, textAlign: "center", fontWeight: 500 }}>
               {message}
             </div>
           )}
 
-          {/* Upload Section */}
-          <div style={{ 
-            background: theme.bg2, 
-            borderRadius: 20, 
-            padding: 24, 
-            marginBottom: 24, 
-            border: "2px dashed " + theme.border,
-            textAlign: "center"
-          }}>
+          <div style={{ background: theme.bg2, borderRadius: 20, padding: 32, marginBottom: 24, border: "2px dashed " + theme.border, textAlign: "center" }}>
             <input
               type="file"
               id="file-upload"
-              accept=".txt,.pdf,.docx,.md"
+              accept=".txt,.pdf,.docx,.md,.csv"
               onChange={handleFileUpload}
               disabled={uploading}
               style={{ display: "none" }}
             />
-            <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
+            <label htmlFor="file-upload" style={{ cursor: "pointer", display: "block" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📤</div>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8, color: theme.accent }}>
                 {uploading ? "Uploading and training AI..." : "Click to upload document"}
               </div>
-              <div style={{ fontSize: 12, color: theme.textSub }}>
-                TXT, PDF, DOCX, or MD files
-              </div>
+              <div style={{ fontSize: 12, color: theme.textSub }}>TXT, PDF, DOCX, or CSV files</div>
             </label>
           </div>
 
-          {/* Documents List */}
-          <div style={{ 
-            background: theme.bg2, 
-            borderRadius: 20, 
-            padding: 24, 
-            border: "1px solid " + theme.border 
-          }}>
+          <div style={{ background: theme.bg2, borderRadius: 20, padding: 24, border: "1px solid " + theme.border }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Your Documents ({documents.length})</h2>
             {documents.length === 0 ? (
               <div style={{ textAlign: "center", padding: 40, color: theme.textMuted }}>
@@ -253,41 +202,17 @@ export default function DocumentsPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {documents.map((doc) => (
-                  <div 
-                    key={doc.id} 
-                    style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      alignItems: "center",
-                      padding: "12px 16px",
-                      background: theme.bg3,
-                      borderRadius: 12,
-                      border: "1px solid " + theme.border
-                    }}
-                  >
+                  <div key={doc.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: theme.bg3, borderRadius: 12, border: "1px solid " + theme.border }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ fontSize: 24 }}>📄</span>
                       <div>
                         <div style={{ fontWeight: 600 }}>{doc.filename}</div>
                         <div style={{ fontSize: 11, color: theme.textMuted }}>
-                          {new Date(doc.created_at).toLocaleDateString()}
+                          {new Date(doc.created_at || doc.uploaded_at || Date.now()).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => deleteDocument(doc.id, doc.filename)}
-                      style={{
-                        background: "transparent",
-                        border: "1px solid #EF4444",
-                        padding: "6px 12px",
-                        borderRadius: 8,
-                        cursor: "pointer",
-                        color: "#EF4444",
-                        fontSize: 12
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
+                    <button onClick={() => deleteDocument(doc.id, doc.filename)} style={{ background: "transparent", border: "1px solid #EF4444", padding: "6px 12px", borderRadius: 8, cursor: "pointer", color: "#EF4444", fontSize: 12 }}>🗑️ Delete</button>
                   </div>
                 ))}
               </div>
@@ -295,6 +220,7 @@ export default function DocumentsPage() {
           </div>
         </div>
       </main>
+      <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
