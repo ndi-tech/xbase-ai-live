@@ -69,9 +69,10 @@ export default function DocumentsPage() {
 
   const loadDocuments = async () => {
     try {
+      // Try different possible column names
       const { data, error } = await supabase
         .from('documents')
-        .select('id, filename, content, created_at, uploaded_at')
+        .select('*')
         .eq('user_id', user?.id);
       
       if (error) throw error;
@@ -96,11 +97,11 @@ export default function DocumentsPage() {
       const content = event.target?.result;
       
       try {
+        // Insert with minimal required fields
         const { error } = await supabase.from('documents').insert({
           user_id: user.id,
           filename: file.name,
-          content: content,
-          created_at: new Date().toISOString()
+          content: content
         });
         
         if (error) throw error;
@@ -208,7 +209,7 @@ export default function DocumentsPage() {
                       <div>
                         <div style={{ fontWeight: 600 }}>{doc.filename}</div>
                         <div style={{ fontSize: 11, color: theme.textMuted }}>
-                          {new Date(doc.created_at || doc.uploaded_at || Date.now()).toLocaleDateString()}
+                          {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Just now'}
                         </div>
                       </div>
                     </div>
