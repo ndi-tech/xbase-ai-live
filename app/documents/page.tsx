@@ -62,14 +62,41 @@ export default function DocumentsPage() {
         return;
       }
       setUser(user);
+      
+      // Ensure user exists in business_users table
+      await ensureBusinessUser(user);
       await loadDocuments();
     };
     init();
   }, []);
 
+  const ensureBusinessUser = async (authUser) => {
+    try {
+      // Check if user exists in business_users
+      const { data: existing } = await supabase
+        .from('business_users')
+        .select('id')
+        .eq('id', authUser.id)
+        .single();
+      
+      if (!existing) {
+        // Create business user record
+        await supabase.from('business_users').insert({
+          id: authUser.id,
+          email: authUser.email,
+          business_name: authUser.user_metadata?.business_name || authUser.email?.split('@')[0],
+          phone: authUser.user_metadata?.phone || '656508197',
+          created_at: new Date().toISOString()
+        });
+        console.log("Created business user record");
+      }
+    } catch (err) {
+      console.log("Business user check skipped:", err.message);
+    }
+  };
+
   const loadDocuments = async () => {
     try {
-      // Try different possible column names
       const { data, error } = await supabase
         .from('documents')
         .select('*')
@@ -97,7 +124,9 @@ export default function DocumentsPage() {
       const content = event.target?.result;
       
       try {
-        // Insert with minimal required fields
+        // Ensure business user exists before inserting document
+        await ensureBusinessUser(user);
+        
         const { error } = await supabase.from('documents').insert({
           user_id: user.id,
           filename: file.name,
