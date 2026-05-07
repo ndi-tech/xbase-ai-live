@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
@@ -90,7 +90,7 @@ export default function DocumentsPage() {
         user_id: user.id,
         filename: file.name,
         content: content,
-        uploaded_at: new Date().toISOString()
+        created_at: new Date().toISOString()
       });
       
       if (error) {
@@ -270,7 +270,7 @@ export default function DocumentsPage() {
                       <div>
                         <div style={{ fontWeight: 600 }}>{doc.filename}</div>
                         <div style={{ fontSize: 11, color: theme.textMuted }}>
-                          {new Date(doc.uploaded_at).toLocaleDateString()}
+                          {new Date(doc.created_at).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
